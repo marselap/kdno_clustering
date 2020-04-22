@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 import matplotlib._color_data as mcd
 
-from tf.transformations import quaternion_from_matrix
+from tf.transformations import quaternion_from_matrix, quaternion_matrix
 
 import os, sys
 
@@ -89,7 +89,6 @@ class Clustering:
 
     def get_data_pos_quat(self, mat):
 
-        print np.shape(mat["TP_rec"])
         pos_quat = None
         try:
             pos_quat = mat['data']
@@ -180,9 +179,16 @@ class Clustering:
         if self.centres_q == []:
             self.add_missing_values()
 
-        name = self.outpath + "centres_" + self.title + "_" + str(n_clusters) + ".mat"
+        self.centres_t = []
+        for c in self.centres_q:
+            t = np.asmatrix(quaternion_matrix(c[3:]))
+            t[0:3, 3] = np.reshape(c[0:3], (3,1))
+            self.centres_t.append(t)
+
+        self.centres_t = np.asarray(self.centres_t)
+        name = self.outpath + "centres_" + self.title + "_" + str(self.n_clusters) + ".mat"
         # scipy.io.savemat(name, {'c_c':self.centers})
-        scipy.io.savemat(name, {'c_c':self.centres_q})
+        scipy.io.savemat(name, {'c_c':self.centres_t})
 
 
 

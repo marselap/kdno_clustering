@@ -85,9 +85,9 @@ class Fminsearch:
         xopt = scipy.optimize.fmin(func=objectiveFunLambda, x0=P1)
         end = time.time()
         
-        print(end - start)
+        print("optimization duration: ", end - start)
 
-        print xopt
+        print ("print optimized transform: ", xopt)
         return xopt, self.objectiveFunPosition(xopt, R, txs)
 
     def objectiveFunPosition(self, P, R, T0A):

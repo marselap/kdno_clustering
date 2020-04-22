@@ -46,7 +46,7 @@ if __name__ == '__main__':
     if len(input_files) == 1:
         if os.path.isdir(input_files[0]):
             prepath = os.path.abspath(input_files[0]) + '/'
-            input_files = [prepath + i for i in os.listdir(input_files[0])]
+            input_files = [prepath + i for i in os.listdir(input_files[0]) if "EXP1" in i]
 
     if not os.path.exists(outpath):
         print "Out folder not found. Creating folder ", outpath
@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
         (dirpath, i_filename) = os.path.split(i_file)
         dirpath = os.path.abspath(dirpath)
-        outpath = os.path.abspath(outpath)
+        outpath = os.path.abspath(outpath) + '/'
 
         clustering = Clustering(dirpath, outpath, i_filename, 
                                 method="kmeans", n_clusters = n_clusters)
@@ -79,11 +79,17 @@ if __name__ == '__main__':
         xs.append([xopt])
         fs.append([fopt])
 
+    #     clustering.plot_result(i_fig)
+    #     clustering.save_plot()
+    #     clustering.save_to_mat()
+
+    # plt.show()
+
     benchmark = np.asarray([ 0.01155917, -0.15891211,  0.00319799])
 
     xplot = []
     yplot = []
-    for x,n in zip(xs, xrange(5,20)):
+    for x,n in zip(xs, [n_clusters]):
         print "clusters: ", n
         xplot.append(n)
         print np.linalg.norm(benchmark - np.asarray(x))
@@ -96,17 +102,13 @@ if __name__ == '__main__':
     plt.grid("on")
     plt.title('dist to bench')
 
-    plt.subplot(212)
-    plt.scatter(xplot, fs)
-    plt.grid("on")
-    plt.title('f_opt')
+    # plt.subplot(212)
+    # plt.scatter(xplot, fs)
+    # plt.grid("on")
+    # plt.title('f_opt')
     
     plt.show()
 
-    #     clustering.plot_result(i_fig)
-    #     clustering.save_plot()
-    #     clustering.save_to_mat()
     
-    # plt.show()
 
 
