@@ -186,6 +186,7 @@ class Clustering:
             self.centres_t.append(t)
 
         self.centres_t = np.asarray(self.centres_t)
+        self.centres_t = np.reshape(self.centres_t, (1,2,0))
         name = self.outpath + "centres_" + self.title + "_" + str(self.n_clusters) + ".mat"
         # scipy.io.savemat(name, {'c_c':self.centers})
         scipy.io.savemat(name, {'c_c':self.centres_t})
