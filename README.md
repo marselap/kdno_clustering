@@ -2,10 +2,11 @@ KDNO clustering and optimization python scripts
 
 
 Use:
-
+```
 chmod +x scripts/usage.py
 
 python scripts/usage.py [input_file/s/folder] [output_folder] varname=[unused]
+```
 
 Input can be a file, several files (delimited by space), or a folder. 
 The input file can be a .mat with "CalTx" matrix of transforms, or .mat with "data" of [pos, quat] rows. 
@@ -22,4 +23,8 @@ Size is (4,4,n_clusters)
 
 varname is unused, intended for TODO with master, slave tp_rec
 
-python scripts/usage.py ../VU_eksperimenti/VU_0406_EXP1_kriz.mat output/ varname="CalTx"
+```
+python scripts/usage.py ./data/raw_T output/ varname="CalTx"
+python scripts/usage.py ./data/raw_T/VU_0406_EXP1_krug_vrtnja.mat output/ varname="dmy"
+python scripts/usage.py ./data/raw_q/VU_0406_EXP1_krug_vrtnja.mat output/ varname="dmy"
+```
