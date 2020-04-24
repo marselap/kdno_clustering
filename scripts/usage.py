@@ -20,24 +20,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find representative samples by clustering and optimize transform.')
     parser.add_argument('data_path', metavar='inpath', type=str, nargs='+',
                         help='path to mat file with dataset')
-    parser.add_argument('outpath', metavar='outpath', type=str, nargs='+',
+    parser.add_argument('outpath', metavar='outpath', type=str,
                         help='path to folder for cluster centers and image')
     
-    parser.add_argument('vn', metavar='varname', type=str, help='variable name in the provided input file')
+    parser.add_argument('--vn', metavar='varname', type=str, help='variable name in the provided input file', default="data")
     
 
     args = parser.parse_args()
-    
-    print args 
 
     input_files = args.data_path
-    outpath = args.outpath[0]
+    outpath = args.outpath
+    varname = args.vn
 
-    print input_files
-    print outpath
-
-
-    print len(input_files)
+    print "input_files: ", input_files
+    print "outpath", outpath
+    print "varname", varname
     
     for fp in input_files:
         if not os.path.exists(fp):
@@ -65,7 +62,7 @@ if __name__ == '__main__':
         outpath = os.path.abspath(outpath) + '/'
 
         clustering = Clustering(dirpath, outpath, i_filename, 
-                                method="kmeans", n_clusters = n_clusters)
+                                method="kmeans", n_clusters = n_clusters, varname = varname)
         clustering.do_cluster()
         clustering.add_missing_values()
 
@@ -81,7 +78,7 @@ if __name__ == '__main__':
 
     #     clustering.plot_result(i_fig)
     #     clustering.save_plot()
-    #     clustering.save_to_mat()
+        # clustering.save_to_mat()
 
     # plt.show()
 

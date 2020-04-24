@@ -60,9 +60,6 @@ class Clustering:
         fullpath = os.path.join(inpath,filename)
         mat = scipy.io.loadmat(fullpath)
 
-        self.pos_quat = self.get_data_pos_quat(mat)
-        self.pos_dir_vec = np.array([pos_q_2_pos_vec(row) for row in self.pos_quat])
-
         tmpdict = {}
         if len(kwargs) > 0:
             for key, value in kwargs.items():
@@ -76,6 +73,17 @@ class Clustering:
         else:
             self.n_clusters = 10
 
+        if "varname" in tmpdict.keys():
+            varname = tmpdict["varname"]
+        else:
+            varname = "data"
+
+        try:
+            self.pos_quat = self.get_data_pos_quat(mat, varname)
+        except KeyError as e:
+            raise e
+        self.pos_dir_vec = np.array([pos_q_2_pos_vec(row) for row in self.pos_quat])
+
         self.method = sklcl.KMeans(n_clusters=self.n_clusters, random_state=0)
 
         self.filename = filename
@@ -87,16 +95,24 @@ class Clustering:
         self.centres_dirvec = []
 
 
-    def get_data_pos_quat(self, mat):
+    def get_data_pos_quat(self, mat, varname):
 
         pos_quat = None
-        try:
-            pos_quat = mat['data']
-        except KeyError:
+
+        if "data" in varname:
             try:
-                caltx = mat['CalTx']
+                pos_quat = mat[varname]
             except KeyError:
-                print "nema ni data ni CalTx. Ne podrzavamo Tp_rec i ostalo"
+                print "No variable named ", varname, "Please provide existing variable name in mat file"
+                raise KeyError("No variable named "+varname+"Please provide existing variable name in mat file")
+        elif "CalTx" or "TP_master" or "TP_slave" in varname:
+            try:
+                caltx = mat[varname]
+            except KeyError:
+                raise KeyError("No variable named "+varname+"Please provide existing variable name in mat file")
+        else:
+            raise KeyError("No variable named "+varname+"Please provide existing variable name in mat file")
+
 
         if pos_quat is None:
             m = max(np.shape(caltx))
