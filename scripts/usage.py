@@ -76,35 +76,35 @@ if __name__ == '__main__':
         xs.append([xopt])
         fs.append([fopt])
 
-    #     clustering.plot_result(i_fig)
-    #     clustering.save_plot()
-        # clustering.save_to_mat()
+        clustering.plot_result(i_fig)
+        clustering.save_plot()
+        clustering.save_to_mat()
 
-    # plt.show()
-
-    benchmark = np.asarray([ 0.01155917, -0.15891211,  0.00319799])
-
-    xplot = []
-    yplot = []
-    for x,n in zip(xs, [n_clusters]):
-        print "clusters: ", n
-        xplot.append(n)
-        print np.linalg.norm(benchmark - np.asarray(x))
-        yplot.append(np.linalg.norm(benchmark - np.asarray(x)))
-
-
-    fig = plt.figure()
-    plt.subplot(211)
-    plt.scatter(xplot, yplot)
-    plt.grid("on")
-    plt.title('dist to bench')
-
-    # plt.subplot(212)
-    # plt.scatter(xplot, fs)
-    # plt.grid("on")
-    # plt.title('f_opt')
-    
     plt.show()
+
+    # benchmark = np.asarray([ 0.01155917, -0.15891211,  0.00319799])
+
+    # xplot = []
+    # yplot = []
+    # for x,n in zip(xs, [n_clusters]):
+    #     print "clusters: ", n
+    #     xplot.append(n)
+    #     print np.linalg.norm(benchmark - np.asarray(x))
+    #     yplot.append(np.linalg.norm(benchmark - np.asarray(x)))
+
+
+    # fig = plt.figure()
+    # plt.subplot(211)
+    # plt.scatter(xplot, yplot)
+    # plt.grid("on")
+    # plt.title('dist to bench')
+
+    # # plt.subplot(212)
+    # # plt.scatter(xplot, fs)
+    # # plt.grid("on")
+    # # plt.title('f_opt')
+    
+    # plt.show()
 
     
 

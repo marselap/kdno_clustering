@@ -113,7 +113,6 @@ class Clustering:
         else:
             raise KeyError("No variable named "+varname+"Please provide existing variable name in mat file")
 
-
         if pos_quat is None:
             m = max(np.shape(caltx))
             pos_quat = np.empty((m,7))
@@ -168,7 +167,6 @@ class Clustering:
             self.add_missing_values()
 
         fig = plt.figure(i_fig)
-        plt.title(self.title)
         ax1 = plt.subplot(2,1,1, projection='3d')
         ax2 = plt.subplot(2,1,2, projection='3d')
 
@@ -186,7 +184,10 @@ class Clustering:
 
             i = center    
             ax2.quiver(i[0], i[1], i[2], i[3], i[4], i[5], color=cn)
-    
+
+        plt.suptitle(self.title)
+
+
     def save_plot(self):
         plt.savefig(self.outpath+self.title)
 
@@ -201,8 +202,8 @@ class Clustering:
             t[0:3, 3] = np.reshape(c[0:3], (3,1))
             self.centres_t.append(t)
 
-        self.centres_t = np.asarray(self.centres_t)
-        self.centres_t = np.reshape(self.centres_t, (1,2,0))
+        self.centres_t = np.array(self.centres_t)
+        self.centres_t = self.centres_t.transpose((1,2,0))
         name = self.outpath + "centres_" + self.title + "_" + str(self.n_clusters) + ".mat"
         # scipy.io.savemat(name, {'c_c':self.centers})
         scipy.io.savemat(name, {'c_c':self.centres_t})
