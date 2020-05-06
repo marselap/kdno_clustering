@@ -91,9 +91,16 @@ class Clustering:
         title = self.filename.split('.mat')
         self.title = title[0]
 
+        self.centres = []
         self.centres_q = []
         self.centres_dirvec = []
 
+
+    def get_centres(self):
+        return self.centres
+
+    def set_centres_q(self, new_centres_q):
+        self.centres_q = new_centres_q
 
     def get_data_pos_quat(self, mat, varname):
 
@@ -134,9 +141,16 @@ class Clustering:
 
     def do_cluster(self):
         self.method.fit(self.pos_quat[:,0:3])
+        # self.method.fit(self.pos_quat[:,:])
         self.labels = self.method.labels_
         self.centres = self.method.cluster_centers_
         self.lset = set(self.labels)
+
+    def add_missing_values_cluster_q(self):
+        self.centres_dirvec = []
+        self.centres_dirvec = [pos_q_2_pos_vec(row) for row in self.centres_q]
+        self.centres_dirvec = np.asarray(self.centres_dirvec)
+
 
     def add_missing_values(self):
         #hard coded center = closest_point(center)
