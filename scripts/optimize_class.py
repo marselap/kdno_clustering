@@ -6,7 +6,7 @@ import scipy.io
 from tf.transformations import quaternion_matrix
 import time
 import sys
-
+import random
 
 class Fminsearch:
     def __init__(self, *args):
@@ -51,8 +51,16 @@ class Fminsearch:
                     var_name = args[1]
                 else:
                     var_name = "data"
+                
+                mat = scipy.io.loadmat(filename)
+                try:
+                    read_dataset = mat[var_name]
+                except KeyError as e:
+                    print "no data under: ", var_name
+
             elif isinstance(self.passed_arg, np.ndarray):
                 read_dataset = self.passed_arg
+
             elif isinstance(self.passed_arg, list):
                 read_dataset = np.asarray(self.passed_arg)
             
@@ -61,34 +69,61 @@ class Fminsearch:
             i_filename = "VU_0406_EXP1_krug_vrtnja_3_caltx.mat"
             filename = inpath + i_filename
             var_name = "data"
-
-        if filename is not None:
             mat = scipy.io.loadmat(filename)
-
             try:
                 read_dataset = mat[var_name]
             except KeyError as e:
                 print "no data under: ", var_name
 
         self.read_dataset = read_dataset
+
+        try:
+            a = filename.split('/')
+            a = a[-1]
+            a = a.split('.mat')
+            a = a[0]
+            self.dataset_name = a
+        except:
+            "could not parse dataset name"
         self.get_data_matrix()
 
-    def do_optimise_pos(self, p1, r1):
+    def do_optimise_pos(self, p1, r1, txs = None):
         
         P1 = np.array(p1, dtype="float32")
         R = np.float32(r1).transpose()
-        txs = np.float32(self.Txs[::,:,:])
+        if txs is None:
+            txs = np.float32(self.Txs[::,:,:])
 
         objectiveFunLambda = lambda x: self.objectiveFunPosition(x, R, txs)
         
+        m,n,k = np.shape(txs)
+        
+        print("")
+        print ("Start optimize transform on dataset " + self.dataset_name)
+        print ("Optimizing transform on " +str(m)+ " data points.")
+        print ("---------------")
         start = time.time()
         xopt = scipy.optimize.fmin(func=objectiveFunLambda, x0=P1)
         end = time.time()
         
-        print("optimization duration: ", end - start)
-
-        print ("print optimized transform: ", xopt)
+        print ("---------------")
+        print("Optimization duration: " + str(end - start) + " seconds.")
+        print ("Optimized transform: " + str(xopt))
+        print("")
         return xopt, self.objectiveFunPosition(xopt, R, txs)
+
+
+    def do_optimise_pos_random(self, p1, r1, n_rand):
+        
+
+        m,n,k = np.shape(self.Txs)
+        rand_indices = random.sample(range(0, m), n_rand)        
+
+        txs = np.float32(self.Txs[rand_indices,:,:])
+        xopt, fopt = self.do_optimise_pos(p1, r1, txs)
+
+        return xopt, fopt
+
 
     def objectiveFunPosition(self, P, R, T0A):
         #Optimization for position - transposed matrices for faster computation
@@ -106,28 +141,30 @@ class Fminsearch:
                 p = Told[3, 0:3] - Told_1[3, 0:3]
                 f = f + np.linalg.norm(p)
 
-        # print f
         return f
 
 
 
 if __name__ == "__main__":
 
-    # if len(sys.argv) > 1:
-    #     inpath = sys.arg
-
 
     optim = Fminsearch()
     optim.load_set("/home/marsela/Documents/MATLAB/cluster/VU_eksperimenti/VU_0406_EXP1_krug_vrtnja_3.mat", "CalTx")
-    # optim.load_set("/home/marsela/Documents/MATLAB/cluster/VU_exp_q_centers/centres_VU_0406_EXP1_krug_vrtnja_3_caltx_10.mat", "c_c")
     
     p1 = [0,0,0]
     r1 = np.eye(3)
 
-    optim.do_optimise_pos(p1,r1)
+    optim.do_optimise_pos_random(p1,r1,10)
 
     pass
 
+
+# Optimization terminated successfully.
+#          Current function value: 1326.962737
+#          Iterations: 124
+#          Function evaluations: 253
+# ('optimization duration: ', 1358.044676065445)
+# ('print optimized transform: ', array([ 0.01155917, -0.15891211,  0.00319799]))
 
 
 # def objectiveFunPosition1(P, R, T0A):
