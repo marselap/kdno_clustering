@@ -84,7 +84,8 @@ class Fminsearch:
             a = a[0]
             self.dataset_name = a
         except:
-            "could not parse dataset name"
+            print "could not parse dataset name"
+            self.dataset_name = "dataset"
         self.get_data_matrix()
 
     def do_optimise_pos(self, p1, r1, txs = None):

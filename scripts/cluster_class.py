@@ -2,6 +2,7 @@
 
 # from sklearn.cluster import KMeans
 import sklearn.cluster as sklcl
+import sklearn.mixture as sklmx
 import numpy as np
 import scipy.io
 
@@ -13,8 +14,12 @@ from tf.transformations import quaternion_from_matrix, quaternion_matrix
 
 import os, sys
 
+import random
+import time
+
 from optimize_class import Fminsearch
 
+from copy import deepcopy
 
 def pos_q_2_pos_vec(row):
     s = []
@@ -49,6 +54,11 @@ def find_closest_member(cluster_members, center):
             min_index_subset = i
     return min_index_subset
 
+def find_mean_member(cluster_members):
+
+    cm = cluster_members
+    return np.asarray([np.mean(cm[:,0]), np.mean(cm[:,1]), np.mean(cm[:,2])])
+
 
 def mean(a):
     return sum(a) / len(a)
@@ -68,23 +78,112 @@ class Clustering:
             print "clustering to 10 clusters"
             self.n_clusters = 10
 
-        if 'n_clusters' in tmpdict.keys():
-            self.n_clusters =  tmpdict['n_clusters']
-        else:
-            self.n_clusters = 10
 
-        if "varname" in tmpdict.keys():
-            varname = tmpdict["varname"]
+        if len(kwargs) > 0:
+
+            if "varname" in tmpdict.keys():
+                varname = tmpdict["varname"]
+            else:
+                varname = "data"
+
+            if 'method' in kwargs.keys():
+                self.methodname = kwargs['method']
+
+                randint_ = random.randint(0,100)
+                if 'KMeans' in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.KMeans(n_clusters = n['n_clusters'],random_state=randint_)
+                    else:
+                        self.method = sklcl.KMeans(random_state=0)
+
+                if 'DBSCAN' in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.DBSCAN(eps=n['eps'], min_samples=n['min_samples'],random_state=randint_)
+                    else:
+                        self.method = sklcl.DBSCAN()
+
+                if 'OPTICS' in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.OPTICS(max_eps=n['max_eps'], min_samples=n['min_samples'],random_state=randint_)
+                    else:
+                        self.method = sklcl.OPTICS()
+
+
+                if 'AffinityPropagation' in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.AffinityPropagation(damping=n['damping'],random_state=randint_)
+                    else:
+                        self.method = sklcl.AffinityPropagation()
+
+
+                if 'MeanShift' in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.MeanShift(bandwidth=n['bandwidth'],random_state=randint_)
+                    else:
+                        self.method = sklcl.MeanShift()
+
+                if "SpectralClustering" in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.SpectralClustering(n_clusters=n['n_clusters'],random_state=randint_)
+                    else:
+                        self.method = sklcl.SpectralClustering()
+
+                if "Birch" in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.Birch(threshold=n['threshold'], n_clusters=n['n_clusters'])
+                    else:
+                        self.method = sklcl.Birch()
+
+                if "AgglomerativeClustering" in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklcl.AgglomerativeClustering(n_clusters=n['n_clusters'], linkage=n['linkage'])
+                        self.n_clusters = n['n_clusters']
+                    else:
+                        self.method = sklcl.AgglomerativeClustering()
+                        self.n_clusters = 2
+
+                if "GaussianMixture" in self.methodname:
+                    if 'xtra' in kwargs.keys():
+                        n = kwargs['xtra']
+                        self.method = sklmx.GaussianMixture(covariance_type=n['covariance_type'], n_components=n['n_components'],random_state=randint_)
+                    else:
+                        self.method = sklmx.GaussianMixture()
+
+
+                else:
+                    pass
         else:
-            varname = "data"
+            print "clustering with KMeans"
+            self.method = sklcl.KMeans(random_state=0)
+            self.methodname = 'KMeans'
+
+        print"------------"
+        print(self.methodname)
+
+
+
+        # if 'n_clusters' in tmpdict.keys():
+        #     self.n_clusters =  tmpdict['n_clusters']
+        # else:
+        #     self.n_clusters = 10
+
 
         try:
             self.pos_quat = self.get_data_pos_quat(mat, varname)
+            self.pos_quat_saved = self.pos_quat
         except KeyError as e:
             raise e
         self.pos_dir_vec = np.array([pos_q_2_pos_vec(row) for row in self.pos_quat])
 
-        self.method = sklcl.KMeans(n_clusters=self.n_clusters, random_state=0)
+        # self.method = sklcl.KMeans(n_clusters=self.n_clusters, random_state=randint_)
 
         self.filename = filename
         self.outpath = outpath
@@ -110,15 +209,26 @@ class Clustering:
             try:
                 pos_quat = mat[varname]
             except KeyError:
-                print "No variable named ", varname, "Please provide existing variable name in mat file"
-                raise KeyError("No variable named "+varname+"Please provide existing variable name in mat file")
-        elif "CalTx" or "TP_master" or "TP_slave" in varname:
+                print "No variable named ", varname, " Please provide existing variable name in mat file"
+                raise KeyError("No variable named "+varname+" Please provide existing variable name in mat file")
+        elif "CalTx" in varname or "TP_master" in varname or "TP_slave" in varname:
             try:
                 caltx = mat[varname]
             except KeyError:
-                raise KeyError("No variable named "+varname+"Please provide existing variable name in mat file")
+                raise KeyError("No variable named "+varname+" Please provide existing variable name in mat file")
+        elif "Kuka" in varname:
+            try:
+                temp = mat[varname]
+                [k4,k4,m,n] = np.shape(temp)
+                temp2 = np.zeros((4,4,m*n))
+                for i in range(m):
+                    for j in range(n):
+                        temp2[:,:, (i-1) * n + j] = temp[:,:,i,j]
+                caltx = temp2
+            except KeyError:
+                raise KeyError("No variable named "+varname+" Please provide existing variable name in mat file")
         else:
-            raise KeyError("No variable named "+varname+"Please provide existing variable name in mat file")
+            raise KeyError("No variable named "+varname+" Please provide existing variable name in mat file")
 
         if pos_quat is None:
             m = max(np.shape(caltx))
@@ -140,11 +250,55 @@ class Clustering:
         return pos_quat
 
     def do_cluster(self):
+        
+        if "Agglom" in self.methodname: 
+            data = deepcopy(self.pos_quat_saved)
+            np.random.shuffle(data)
+            # np.random.shuffle(self.pos_quat)
+            self.pos_quat = data[0:-2,:]
+            self.pos_dir_vec = np.array([pos_q_2_pos_vec(row) for row in self.pos_quat])
+
         self.method.fit(self.pos_quat[:,0:3])
-        # self.method.fit(self.pos_quat[:,:])
-        self.labels = self.method.labels_
-        self.centres = self.method.cluster_centers_
+
+        try:
+            self.labels = self.method.labels_
+        except:
+            print "no labels in method", self.methodname
+            self.labels = self.method.predict(self.pos_quat[:,0:3])
+
         self.lset = set(self.labels)
+        
+        clustersizes = []
+        for l in self.lset:
+            clustersizes.append(len([i for i in self.labels if i == l]))
+
+        for l,cs in zip(self.lset, clustersizes):
+            if cs < 5:
+                for i, lab in enumerate(self.labels):
+                    if lab == l:
+                        self.labels[i] = -1
+        self.lset = set(self.labels)
+
+        clustersizes = []
+        for l in self.lset:
+            clustersizes.append(len([i for i in self.labels if i == l]))
+
+
+        try:
+            self.centres = self.method.cluster_centers_
+        except:
+            print "no centres in method", self.methodname
+            for label in self.lset:
+                indices = [i for i, x in enumerate(self.labels) if x == label]
+                cluster_members = np.asarray([self.pos_dir_vec[i] for i in indices])
+                center = find_mean_member(cluster_members)
+                self.centres.append(center)
+        print "no of centres: ", len(self.centres)
+        print "no of labels: ", len(self.lset)
+        print "lset sizes: ", clustersizes
+        
+
+
 
     def add_missing_values_cluster_q(self):
         self.centres_dirvec = []
@@ -237,60 +391,110 @@ if __name__ == '__main__':
     all_files = os.listdir(path)
     caltx_files = [i for i in all_files if 'caltx' in i]
 
-    krug_vrtnja = [i for i in caltx_files if "krug_vrtnja_2" in i]
-
-    n_clusters = 10
-
-    xs = []
-    fs = []
-    for n_clusters in xrange(5,20):
-        i_fig = 1
-        i_filename = krug_vrtnja[0]
-
-        # for (i_fig, i_filename) in enumerate(krug_vrtnja):
-        clustering = Clustering(path, outpath, i_filename, 
-                                method="kmeans", n_clusters = n_clusters)
-        clustering.do_cluster()
-        clustering.add_missing_values()
-
-
-        optim = Fminsearch()
-        optim.load_set(clustering.centres_q)
-        p1 = [0,0,0]
-        r1 = np.eye(3)
-
-        xopt, fopt = optim.do_optimise_pos(p1,r1)
-        xs.append([xopt])
-        fs.append([fopt])
-
+    krug_vrtnja = [i for i in caltx_files if "krug_vrtnj" in i and not "okoosi" in i]
     benchmark = np.asarray([ 0.01155917, -0.15891211,  0.00319799])
 
-    xplot = []
-    yplot = []
-    for x,n in zip(xs, xrange(5,20)):
-        print "clusters: ", n
-        xplot.append(n)
-        print np.linalg.norm(benchmark - np.asarray(x))
-        yplot.append(np.linalg.norm(benchmark - np.asarray(x)))
+
+    n_clusters = 15
+    methods = [ # 'AffinityPropagation',
+                # 'MeanShift',
+                # 'SpectralClustering', # SPOROOO
+                
+                
+                # 'KMeans', 
+                # 'Birch',
+                'AgglomerativeClusteringWard',
+                # 'AgglomerativeClusteringComplete',
+                # 'AgglomerativeClusteringAverage',
+                # 'GaussianMixtureFull',
+                # 'GaussianMixtureTied',
+                # 'GaussianMixtureDiag',
+                # 'GaussianMixtureSpher',
+                ]
+    params = [  # {'damping':0.95},
+                # {'bandwidth':0.02}, 
+                # {'n_clusters':n_clusters},
+                
+                
+                # {'n_clusters':n_clusters},
+                # {'threshold':0.01, 'n_clusters':n_clusters},
+                {'n_clusters':n_clusters, 'linkage':'ward'},
+                # {'n_clusters':n_clusters, 'linkage':'complete'},
+                # {'n_clusters':n_clusters, 'linkage':'average'},
+                # {'covariance_type':'full', 'n_components':n_clusters},
+                # {'covariance_type':'tied', 'n_components':n_clusters},
+                # {'covariance_type':'diag', 'n_components':n_clusters},
+                # {'covariance_type':'spherical', 'n_components':n_clusters},
+                ]
 
 
-    fig = plt.figure()
-    plt.subplot(211)
-    plt.scatter(xplot, yplot)
-    plt.grid("on")
-    plt.title('dist to bench')
+    xopts = []
+    for i_filename in krug_vrtnja:
 
-    plt.subplot(212)
-    plt.scatter(xplot, fs)
-    plt.grid("on")
-    plt.title('f_opt')
-    
+        xs = []
+        fs = []
+
+
+        for method, param in zip(methods, params):
+            i_fig = 1
+            # i_filename = krug_vrtnja[0]
+            dists = []
+            fopts = []
+            if "Birch" in method or "Agglom" in method: 
+                rep = 5
+            else:
+                rep = 1
+            for ponovi in xrange(rep):
+                clustering = Clustering(path, outpath, i_filename, 
+                                        method=method, xtra = param)
+                start_time = time.time()
+                clustering.do_cluster()
+                print "duration: ", time.time()-start_time
+                clustering.add_missing_values()
+
+
+                optim = Fminsearch()
+                optim.load_set(clustering.centres_q)
+                p1 = [0,0,0]
+                r1 = np.eye(3)
+
+                xopt, fopt = optim.do_optimise_pos(p1,r1)
+
+
+                # xs.append([xopt])
+                # fs.append([fopt])
+
+                dists.append(np.linalg.norm(benchmark - np.asarray(xopt)))
+                fopts.append(fopt) 
+                xopts.append(xopt)
+
+            xs.append(np.mean(dists))
+            fs.append(np.mean(fopts))
+            
+
+        xplot = []
+        yplot = []
+
+        i = 0
+        for method, param, x in zip(methods, params, xs):
+
+            i = i + 1
+            xplot.append(i)
+            # print np.linalg.norm(benchmark - np.asarray(x))
+            # yplot.append(np.linalg.norm(benchmark - np.asarray(x)))
+            yplot.append(x)
+
+        fig = plt.figure(i_fig)
+        plt.subplot(211)
+        plt.scatter(xplot, yplot)
+        plt.grid("on")
+        plt.title('dist to bench')
+
+        plt.subplot(212)
+        plt.scatter(xplot, fs)
+        plt.grid("on")
+        plt.title('f_opt')
+        
     plt.show()
-
-    #     clustering.plot_result(i_fig)
-    #     clustering.save_plot()
-    #     clustering.save_to_mat()
-    
-    # plt.show()
 
 
